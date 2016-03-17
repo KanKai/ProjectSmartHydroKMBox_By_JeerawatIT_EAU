@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HydroKMBox V1.0.0</title>
+    <!-- Bootstrap core CSS -->
+    <link href="bootstrap.css" rel="stylesheet">
+    <!-- Custom styles for this template -->
+    <link href="navbar.css" rel="stylesheet"> 
+
+    <script src="jquery.js"></script>
+    <script src="bootstrap.js"></script>
+    <script src="gauge.js"></script>  
+
+    <style type="text/css">
+        .center {
+             float: none;
+             margin: auto;
+        }
+    </style>
+
+    <script language="javascript" type="text/javascript">
+        var websocket;
+        $(document).ready(function(){
+            console.log('System Ready...'); 
+
+            function showTemperature() {
+
+                var gauge = new Gauge({
+                    renderTo    : 'temperature',
+                    width       : 200,
+                    height      : 200,
+                    glow        : true,
+                    units       : 'ยฐC',
+                    title       : 'อุณหภูมิ',
+                    minValue    : 0,
+                    maxValue    : 100,
+                    majorTicks  : ['0','10','20','30','40','50','60','70','80','90','100'],
+                    minorTicks  : 2,
+                    strokeTicks : false,
+                    highlights  : [
+                        { from : 0,  to : 20,  color : '#eee' },
+                        { from : 20, to : 50,  color : '#ccc' },
+                        { from : 50, to : 80,  color : '#aaa' },
+                        { from : 80, to : 100, color : '#eaa '}
+                    ],
+                    colors : {
+                        needle : { start : '#f00', end : '#00f' }
+                    }
+                });
+
+                gauge.setValue(0); 
+                gauge.draw();
+            };
+
+            function showHumidity() {
+
+                var gauge = new Gauge({
+                    renderTo    : 'humidity',
+                    width       : 200,
+                    height      : 200,
+                    glow        : true,
+                    units       : '%',
+                    title       : 'ความชื้น',
+                    minValue    : 0,
+                    maxValue    : 100,
+                    majorTicks  : ['0','10','20','30','40','50','60','70','80','90','100'],
+                    minorTicks  : 2,
+                    strokeTicks : false,
+                    highlights  : [
+                        { from : 0,  to : 20,  color : '#eee' },
+                        { from : 20, to : 50,  color : '#ccc' },
+                        { from : 50, to : 80,  color : '#aaa' },
+                        { from : 80, to : 100, color : '#eaa '}
+                    ],
+                    colors : {
+                        needle : { start : '#f00', end : '#00f' }
+                    }
+                });
+
+                gauge.setValue(0); 
+                gauge.draw();
+            };                
+
+            function startSocket(){
+                var wsUri = "ws://" + location.host + "/";
+                websocket = new WebSocket(wsUri);
+                websocket.onopen = function(evt) { console.log("CONNECTED"); };
+                websocket.onclose = function(evt) { console.log("DISCONNECTED"); };
+                websocket.onmessage = function(evt) { onMessage(evt) };
+                websocket.onerror = function(evt) { console.log('ERROR: ', evt.data); };
+            } 
+
+            function onMessage(evt)
+            {                
+                var obj = jQuery.parseJSON( evt.data );
+                if (obj.Type == 1){
+	                Gauge.Collection.get('temperature').setValue( obj.Temperature);
+                    Gauge.Collection.get('humidity').setValue( obj.Humidity);
+                }
+                if (obj.Type == 2){
+                    console.log('GPIO State Changed: ', obj);
+
+                     
+                    s_img = '#gpio' + obj.gpio;
+                    src = obj.status == 1 ? 'light-on.png' : 'light-off.png';
+                    $(s_img).attr('src', src);
+                }                
+            } 
+            function doSend(message)
+            {
+                websocket.send(message);
+            }
+
+            startSocket();
+            showTemperature();
+            showHumidity();
+        });
+    </script>
+	 
+
+</head>
+
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">HydroKMBox</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="/">หน้าแรก</a></li>			
+			<li><a href="/gpio">ควบคุมหัวจ่ายน้ำ</a></li>
+            <li><a href="/temconfig">ตั้งค่าอุณหภูมิ</a></li>
+            <li><a href="/network">ระบบเครือข่าย</a></li>
+			<li><a href="/config">เครื่องแม่ข่าย</a></li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">ตั้งค่าผู้ใช้ <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="/login">ออกจากระบบ</a></li>                
+              </ul>
+            </li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+</nav>
+<div class="container">
+   
+    <div class="jumbotron">
+        <h2>Dashboard [{serial}]</h2>
+        <p>ระบบควบคุมอุณหภูมิ และความชื้น</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">ค่าที่กำหนดไว้</div>
+                        <div class="panel-body">
+                            <div class="page-header"><h4>อุณหภูมิ</h4></div>
+                            <div class="alert alert-warning" role="alert">
+                                <span>ต่ำสุด: {temp_min}</span>
+                            </div>
+                            <div class="alert alert-danger" role="alert">
+                                <span>สูงสุด: {temp_max}</span>
+                            </div>
+                            <div class="page-header"><h4>ความชื้น</h4></div>
+                            <div class="alert alert-danger" role="alert">
+                                <span>สูงสุด: {humi_max}</span>
+                            </div>
+                        </div>
+                    </div> 
+                </div>
+            </div>             
+        </div>
+
+        <div class="col-md-9">
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">แสดงอุณหภูมิ & ความชื้น</div>
+                        <div class="panel-body">
+                          <div class="row">
+                            <div class="col-sm-6">
+                                <div class="col-md-offset-3 col-sm-offset-0 col-xs-offset-2"><canvas class="center" id="temperature"></canvas></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="col-md-offset-3 col-sm-offset-0 col-xs-offset-2"><canvas class="center" id="humidity"></canvas></div>
+                            </div>
+                          </div>
+                        </div>
+                    </div>      
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-6">
+                            <div class="panel panel-primary">
+                                <div class="panel-heading">หัวจ่ายน้ำหัวที่ 1</div>
+                                <div class="panel-body">
+                                    <div class="col-md-offset-5 col-sm-offset-5 col-xs-offset-5">{gpio12}</div>
+                                </div>
+                            </div> 
+                        </div>
+                         <div class="col-md-6 col-sm-6">
+                            <div class="panel panel-primary">
+                                <div class="panel-heading">หัวจ่ายน้ำหัวที่ 2</div>
+                                <div class="panel-body">
+                                    <div class="col-md-offset-5 col-sm-offset-5 col-xs-offset-5">{gpio13}</div>
+                                </div>
+                            </div> 
+                        </div> 
+						<div class="col-md-6 col-sm-6">
+                            <div class="panel panel-primary">
+                                <div class="panel-heading">หัวจ่ายน้ำหัวที่ 3</div>
+                                <div class="panel-body">
+                                    <div class="col-md-offset-5 col-sm-offset-5 col-xs-offset-5">{gpio14}</div>
+                                </div>
+                            </div> 
+                        </div> 
+						<div class="col-md-6 col-sm-6">
+                            <div class="panel panel-primary">
+                                <div class="panel-heading">พัดลมดูดออก</div>
+                                <div class="panel-body">
+                                    <div class="col-md-offset-5 col-sm-offset-5 col-xs-offset-5">{gpio4}</div>
+                                </div>
+                            </div> 
+                        </div> 
+                    </div> 
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+
+</div> <!-- /container -->
+
+</body>
+</html>
